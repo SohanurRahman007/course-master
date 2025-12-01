@@ -1,4 +1,4 @@
-// components/shared/Navbar.tsx - CUSTOMIZED FULL VERSION
+// components/shared/Navbar.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -30,19 +30,11 @@ import {
   Settings,
   UserCircle,
   LayoutDashboard,
-  ChevronDown,
-  Globe,
-  Sparkles,
-  Trophy,
-  Users,
-  Video,
-  Bookmark,
-  HelpCircle,
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { toast } from "sonner";
 
-// Mock user data
+// Mock user data (later replace with Redux/Context)
 const mockUser = {
   name: "John Doe",
   email: "john@example.com",
@@ -51,28 +43,12 @@ const mockUser = {
   enrolledCourses: 3,
 };
 
-// Categories dropdown
-const categories = [
-  { label: "Web Development", icon: Globe, count: 45 },
-  { label: "Data Science", icon: Sparkles, count: 32 },
-  { label: "Mobile Development", icon: Video, count: 28 },
-  { label: "Business", icon: Users, count: 51 },
-  { label: "Design", icon: Trophy, count: 37 },
-];
-
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Default false
-
-  // Check auth on mount
-  useEffect(() => {
-    checkAuth();
-  }, []);
 
   // Handle scroll effect
   useEffect(() => {
@@ -82,21 +58,6 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  // Check authentication status
-  const checkAuth = async () => {
-    try {
-      const response = await fetch("/api/auth/me");
-      if (response.ok) {
-        const data = await response.json();
-        setIsLoggedIn(true);
-      } else {
-        setIsLoggedIn(false);
-      }
-    } catch (error) {
-      setIsLoggedIn(false);
-    }
-  };
 
   // Handle search
   const handleSearch = (e: React.FormEvent) => {
@@ -112,75 +73,40 @@ export default function Navbar() {
     router.push("/login");
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      toast.success("Logged out successfully!");
-      setIsLoggedIn(false);
-      router.push("/");
-    } catch (error) {
-      toast.error("Logout failed");
-    }
+  const handleLogout = () => {
+    toast.success("Logged out successfully!");
+    router.push("/");
+  };
+
+  const handleProfile = () => {
+    router.push("/profile");
+  };
+
+  const handleDashboard = () => {
+    const dashboardPath =
+      mockUser.role === "admin" ? "/dashboard/admin" : "/dashboard/student";
+    router.push(dashboardPath);
   };
 
   // Navigation items
   const navItems = [
     { label: "Home", href: "/", icon: Home },
     { label: "Courses", href: "/courses", icon: BookOpen },
-    { label: "My Learning", href: "/my-learning", icon: Bookmark },
+    { label: "Categories", href: "/categories", icon: LayoutDashboard },
   ];
 
-  // Hide navbar on auth pages
-  const isAuthPage =
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/register") ||
-    pathname.startsWith("/forgot-password");
-
-  if (isAuthPage) {
-    return null;
-  }
+  // Check if user is logged in (for demo, using mockUser)
+  const isLoggedIn = true; // Change this based on your auth state
 
   return (
     <nav
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${
         isScrolled
-          ? "bg-background/95 backdrop-blur-lg border-b shadow-lg"
-          : "bg-background/80 backdrop-blur-md border-b"
+          ? "bg-background/95 backdrop-blur-lg border-b shadow-sm"
+          : "bg-background border-b"
       }`}
     >
       <div className="container mx-auto px-4">
-        {/* Top Bar */}
-        <div className="flex h-14 items-center justify-between border-b">
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-yellow-500" />
-              <span className="hidden md:inline">New: AI-Powered Learning</span>
-              <span className="md:hidden">New AI Features</span>
-            </div>
-            <div className="h-4 w-px bg-border hidden md:block" />
-            <Link
-              href="/become-instructor"
-              className="text-primary hover:underline hidden md:inline"
-            >
-              Become an Instructor
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Link href="/business" className="text-sm hover:text-primary">
-              For Business
-            </Link>
-            <Link
-              href="/help"
-              className="flex items-center gap-1 text-sm hover:text-primary"
-            >
-              <HelpCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Help</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Main Navigation */}
         <div className="flex h-16 items-center justify-between">
           {/* Logo and Brand */}
           <div className="flex items-center gap-8">
@@ -195,12 +121,12 @@ export default function Navbar() {
             </Button>
 
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 group-hover:scale-105 transition-transform">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/60">
                 <GraduationCap className="h-6 w-6 text-white" />
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-xl font-bold tracking-tight">
                   CourseMaster
                 </h1>
                 <p className="text-xs text-muted-foreground">
@@ -218,9 +144,7 @@ export default function Navbar() {
                   <Link key={item.label} href={item.href}>
                     <Button
                       variant={isActive ? "secondary" : "ghost"}
-                      className={`gap-2 rounded-lg ${
-                        isActive ? "font-semibold shadow-sm" : ""
-                      }`}
+                      className={`gap-2 ${isActive ? "font-semibold" : ""}`}
                     >
                       <Icon className="h-4 w-4" />
                       {item.label}
@@ -228,84 +152,28 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-
-              {/* Categories Dropdown */}
-              <DropdownMenu onOpenChange={setIsCategoriesOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2 rounded-lg">
-                    <span>Categories</span>
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform ${
-                        isCategoriesOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-64 p-2">
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    Browse Categories
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {categories.map((category) => {
-                    const Icon = category.icon;
-                    return (
-                      <DropdownMenuItem
-                        key={category.label}
-                        className="flex items-center justify-between cursor-pointer py-2"
-                        onClick={() =>
-                          router.push(
-                            `/categories/${category.label.toLowerCase()}`
-                          )
-                        }
-                      >
-                        <div className="flex items-center gap-3">
-                          <Icon className="h-4 w-4 text-primary" />
-                          <span>{category.label}</span>
-                        </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {category.count}
-                        </Badge>
-                      </DropdownMenuItem>
-                    );
-                  })}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="cursor-pointer text-primary"
-                    onClick={() => router.push("/categories")}
-                  >
-                    View all categories →
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
 
           {/* Search Bar (Desktop) */}
           <form
             onSubmit={handleSearch}
-            className="hidden lg:flex flex-1 max-w-xl mx-4"
+            className="hidden lg:flex flex-1 max-w-md mx-4"
           >
             <div className="relative w-full">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 type="search"
-                placeholder="What do you want to learn today?"
-                className="pl-12 pr-4 py-6 rounded-full border-2 focus:border-primary shadow-sm"
+                placeholder="Search courses, instructors..."
+                className="pl-10 pr-4 w-full"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <Button
-                type="submit"
-                size="icon"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 rounded-full"
-              >
-                <Search className="h-4 w-4" />
-              </Button>
             </div>
           </form>
 
           {/* Right Side Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* Search Button (Mobile) */}
             <Button
               variant="ghost"
@@ -319,144 +187,81 @@ export default function Navbar() {
             {/* Theme Toggle */}
             <ThemeToggle />
 
-            {/* Wishlist */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative hidden md:flex"
-              onClick={() => router.push("/wishlist")}
-            >
-              <Bookmark className="h-5 w-5" />
+            {/* Notification Bell (Badge Fixed) */}
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center">
+                3
+              </Badge>
             </Button>
 
-            {/* Cart */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-              onClick={() => router.push("/cart")}
-            >
+            {/* Cart (Badge Fixed) */}
+            <Button variant="ghost" size="icon" className="relative">
               <ShoppingCart className="h-5 w-5" />
               <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center">
                 2
               </Badge>
             </Button>
 
-            {/* Notification */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center bg-red-500">
-                    3
-                  </Badge>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <div className="p-2 space-y-2 max-h-60 overflow-y-auto">
-                  <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                    <p className="text-sm font-medium">Course Discount</p>
-                    <p className="text-xs text-muted-foreground">
-                      Web Development Bootcamp is now 50% off!
-                    </p>
-                  </div>
-                  <div className="p-2 rounded-lg">
-                    <p className="text-sm font-medium">New Lesson Added</p>
-                    <p className="text-xs text-muted-foreground">
-                      React Hooks deep dive added to your course
-                    </p>
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer text-center justify-center">
-                  View all notifications
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* User Avatar / Auth Buttons */}
+            {/* User Avatar / Login Button */}
             {isLoggedIn ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="gap-2 px-2 hover:bg-accent/50 rounded-full"
-                  >
-                    <Avatar className="h-9 w-9 ring-2 ring-primary/20">
+                  <Button variant="ghost" className="gap-2 px-2">
+                    <Avatar className="h-8 w-8">
                       <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                      <AvatarFallback className="bg-primary/10 text-primary">
                         {mockUser.name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="hidden lg:flex flex-col items-start">
+                    <span className="hidden sm:inline-flex flex-col items-start">
                       <span className="text-sm font-medium">
                         {mockUser.name}
                       </span>
                       <span className="text-xs text-muted-foreground capitalize">
                         {mockUser.role}
                       </span>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground hidden lg:block" />
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <div className="p-4 border-b">
-                    <p className="font-medium">{mockUser.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {mockUser.email}
-                    </p>
-                  </div>
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => router.push("/dashboard")}
-                    className="cursor-pointer py-3"
+                    onClick={handleDashboard}
+                    className="cursor-pointer"
                   >
-                    <LayoutDashboard className="mr-3 h-4 w-4" />
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
                     Dashboard
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => router.push("/profile")}
-                    className="cursor-pointer py-3"
+                    onClick={handleProfile}
+                    className="cursor-pointer"
                   >
-                    <UserCircle className="mr-3 h-4 w-4" />
-                    My Profile
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => router.push("/my-courses")}
-                    className="cursor-pointer py-3"
-                  >
-                    <BookOpen className="mr-3 h-4 w-4" />
-                    My Courses ({mockUser.enrolledCourses})
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer py-3">
-                    <Settings className="mr-3 h-4 w-4" />
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
                     Settings
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    className="cursor-pointer py-3 text-destructive focus:text-destructive"
+                    className="cursor-pointer text-destructive"
                   >
-                    <LogOut className="mr-3 h-4 w-4" />
+                    <LogOut className="mr-2 h-4 w-4" />
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={handleLogin}
-                  className="hidden sm:flex"
-                >
-                  Log in
+                <Button variant="ghost" onClick={handleLogin}>
+                  Login
                 </Button>
-                <Button
-                  onClick={() => router.push("/register")}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                >
-                  Sign up
+                <Button onClick={() => router.push("/register")}>
+                  Sign Up
                 </Button>
               </div>
             )}
@@ -465,8 +270,8 @@ export default function Navbar() {
 
         {/* Mobile Search Bar */}
         {isMenuOpen && (
-          <div className="pb-4 md:hidden border-t mt-2">
-            <form onSubmit={handleSearch} className="w-full mt-4">
+          <div className="pb-4 md:hidden">
+            <form onSubmit={handleSearch} className="w-full">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
@@ -478,9 +283,15 @@ export default function Navbar() {
                 />
               </div>
             </form>
+          </div>
+        )}
+      </div>
 
-            {/* Mobile Menu Items */}
-            <div className="mt-4 space-y-2">
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="md:hidden border-t bg-background">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex flex-col space-y-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
@@ -492,7 +303,7 @@ export default function Navbar() {
                   >
                     <Button
                       variant={isActive ? "secondary" : "ghost"}
-                      className="w-full justify-start gap-3 py-6"
+                      className="w-full justify-start gap-3"
                     >
                       <Icon className="h-5 w-5" />
                       {item.label}
@@ -500,60 +311,35 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-
-              {/* Categories in Mobile */}
-              <div className="p-2">
-                <p className="text-sm font-medium mb-2 px-2">Categories</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {categories.slice(0, 4).map((category) => {
-                    const Icon = category.icon;
-                    return (
-                      <Button
-                        key={category.label}
-                        variant="outline"
-                        className="justify-start gap-2 py-4"
-                        onClick={() => {
-                          router.push(
-                            `/categories/${category.label.toLowerCase()}`
-                          );
-                          setIsMenuOpen(false);
-                        }}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span className="text-xs">{category.label}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {!isLoggedIn && (
-                <div className="flex gap-2 mt-4">
+                <>
                   <Button
                     variant="outline"
-                    className="flex-1"
+                    className="w-full justify-start gap-3 mt-4"
                     onClick={() => {
                       setIsMenuOpen(false);
                       handleLogin();
                     }}
                   >
-                    Log in
+                    <User className="h-5 w-5" />
+                    Login
                   </Button>
                   <Button
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600"
+                    className="w-full justify-start gap-3"
                     onClick={() => {
                       setIsMenuOpen(false);
                       router.push("/register");
                     }}
                   >
-                    Sign up
+                    <UserCircle className="h-5 w-5" />
+                    Sign Up
                   </Button>
-                </div>
+                </>
               )}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </nav>
   );
 }
