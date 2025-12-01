@@ -1,13 +1,15 @@
-// app/api/auth/login/route.ts
+// app/api/auth/register/route.ts
 import { connectDB } from '@/lib/db';
 import { User } from '@/lib/models/User';
 import { generateToken, setAuthCookie } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-const loginSchema = z.object({
+const registerSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['student', 'instructor']).default('student'),
 });
 
 export async function POST(request: NextRequest) {
@@ -15,28 +17,27 @@ export async function POST(request: NextRequest) {
     await connectDB();
     
     const body = await request.json();
-    const validatedData = loginSchema.parse(body);
+    const validatedData = registerSchema.parse(body);
     
-    // Find user with password
-    const user = await User.findOne({ email: validatedData.email })
-      .select('+password');
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: validatedData.email });
     
-    if (!user) {
+    if (existingUser) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
+        { error: 'User with this email already exists' },
+        { status: 400 }
       );
     }
     
-    // Check password
-    const isPasswordValid = await user.comparePassword(validatedData.password);
+    // Create new user
+    const user = new User({
+      name: validatedData.name,
+      email: validatedData.email,
+      password: validatedData.password,
+      role: validatedData.role,
+    });
     
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
-    }
+    await user.save();
     
     // Generate token
     const token = generateToken({
@@ -54,23 +55,29 @@ export async function POST(request: NextRequest) {
       name: user.name,
       email: user.email,
       role: user.role,
-      avatar: user.avatar,
       createdAt: user.createdAt,
     };
     
     return NextResponse.json({
       success: true,
-      message: 'Login successful',
+      message: 'Registration successful',
       user: userResponse,
       token,
     });
     
   } catch (error: any) {
-    console.error('Login error:', error);
+    console.error('Registration error:', error);
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation error', details: error.errors },
+        { status: 400 }
+      );
+    }
+    
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { error: 'Email already registered' },
         { status: 400 }
       );
     }
