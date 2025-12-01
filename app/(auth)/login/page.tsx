@@ -1,4 +1,4 @@
-// app/(auth)/login/page.tsx
+// app/(auth)/login/page.tsx - Updated with Google Login
 "use client";
 
 import { useState } from "react";
@@ -15,8 +15,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Loader2, Chrome } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -53,7 +54,6 @@ export default function LoginPage() {
         description: `Welcome back, ${data.user.name}!`,
       });
 
-      // Redirect based on user role or redirect param
       setTimeout(() => {
         if (data.user.role === "admin") {
           router.push("/dashboard/admin");
@@ -70,6 +70,14 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleLogin = () => {
+    toast.info("Google login coming soon!", {
+      description: "Currently in development",
+    });
+    // You can implement Google OAuth later
+    // router.push('/api/auth/google');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
       <Card className="w-full max-w-md shadow-2xl border-0">
@@ -83,6 +91,29 @@ export default function LoginPage() {
         </CardHeader>
 
         <CardContent>
+          {/* Google Login Button */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full mb-6"
+            onClick={handleGoogleLogin}
+            disabled={isLoading}
+          >
+            <Chrome className="mr-2 h-4 w-4" />
+            Continue with Google
+          </Button>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <Separator />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with email
+              </span>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
