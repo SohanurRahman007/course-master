@@ -1,13 +1,19 @@
-// lib/models/User.ts
+// lib/models/User.ts - SIMPLE FIX (Remove problematic pre-save hook)
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-// Define interface
-interface IUser extends mongoose.Document {
+export interface IUser extends mongoose.Document {
   name: string;
   email: string;
-  password: string;
+  password?: string;
+  googleId?: string;
   role: 'student' | 'instructor' | 'admin';
+  avatar: string;
+  emailVerified: boolean;
+  provider: 'local' | 'google';
+  enrolledCourses: mongoose.Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -26,42 +32,60 @@ const userSchema = new mongoose.Schema<IUser>({
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
     minlength: [6, 'Password must be at least 6 characters'],
+  },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true,
   },
   role: {
     type: String,
     enum: ['student', 'instructor', 'admin'],
     default: 'student',
   },
+  avatar: {
+    type: String,
+    default: '',
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  provider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local',
+  },
+  enrolledCourses: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course',
+    default: [],
+  }],
 }, {
   timestamps: true,
 });
 
-// Password hash middleware
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error: any) {
-    next(error);
-  }
-});
 
-// Compare password method
+// ✅ Simple compare password method
 userSchema.methods.comparePassword = async function(
   candidatePassword: string
 ): Promise<boolean> {
-  return await bcrypt.compare(candidatePassword, this.password);
+  const user = this as any;
+  
+  if (!user.password) {
+    return false;
+  }
+  
+  return await bcrypt.compare(candidatePassword, user.password);
 };
 
-// Hide password in JSON responses
+// Hide sensitive data
 userSchema.set('toJSON', {
   transform: function(doc, ret) {
     delete ret.password;
+    delete ret.googleId;
+    delete ret.__v;
     return ret;
   }
 });

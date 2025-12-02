@@ -1,4 +1,4 @@
-// app/(auth)/login/page.tsx - Updated with Google Login
+// app/(auth)/login/page.tsx - WITH GOOGLE
 "use client";
 
 import { useState } from "react";
@@ -18,6 +18,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Eye, EyeOff, Mail, Lock, Loader2, Chrome } from "lucide-react";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,7 +31,9 @@ export default function LoginPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
+  // Regular login
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -38,16 +41,14 @@ export default function LoginPage() {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Login failed");
+        throw new Error(data.error || data.message || "Login failed");
       }
 
       toast.success("Login successful!", {
@@ -70,12 +71,20 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    toast.info("Google login coming soon!", {
-      description: "Currently in development",
-    });
-    // You can implement Google OAuth later
-    // router.push('/api/auth/google');
+  // Google login
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    try {
+      await signIn("google", {
+        callbackUrl: redirect,
+        redirect: true,
+      });
+    } catch (error) {
+      toast.error("Google login failed", {
+        description: "Please try again later",
+      });
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -86,7 +95,7 @@ export default function LoginPage() {
             Welcome Back
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
-            Enter your credentials to access your account
+            Sign in to continue your learning journey
           </CardDescription>
         </CardHeader>
 
@@ -97,9 +106,13 @@ export default function LoginPage() {
             variant="outline"
             className="w-full mb-6"
             onClick={handleGoogleLogin}
-            disabled={isLoading}
+            disabled={isLoading || googleLoading}
           >
-            <Chrome className="mr-2 h-4 w-4" />
+            {googleLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Chrome className="mr-2 h-4 w-4" />
+            )}
             Continue with Google
           </Button>
 
@@ -109,7 +122,7 @@ export default function LoginPage() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
-                Or continue with email
+                Or sign in with email
               </span>
             </div>
           </div>
@@ -164,6 +177,7 @@ export default function LoginPage() {
                   size="icon"
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 text-gray-400" />
@@ -193,7 +207,7 @@ export default function LoginPage() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
-                  Don't have an account?
+                  New to CourseMaster?
                 </span>
               </div>
             </div>
@@ -204,7 +218,7 @@ export default function LoginPage() {
               onClick={() => router.push("/register")}
               disabled={isLoading}
             >
-              Create new account
+              Create an account
             </Button>
           </div>
         </CardContent>
