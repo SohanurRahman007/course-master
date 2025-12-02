@@ -1,22 +1,35 @@
-// app/api/auth/me/route.ts
-import { getCurrentUser } from '@/lib/auth';
+// app/api/auth/me/route.ts - UPDATED
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyToken } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
 import { User } from '@/lib/models/User';
-import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const currentUser = await getCurrentUser();
+    // Get token from Authorization header
+    const authHeader = request.headers.get('Authorization');
     
-    if (!currentUser) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'Not authenticated' },
+        { error: 'No token provided' },
         { status: 401 }
       );
     }
-    
+
+    const token = authHeader.split(' ')[1];
+    const decoded = verifyToken(token);
+
+    if (!decoded) {
+      return NextResponse.json(
+        { error: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
-    const user = await User.findById(currentUser.userId);
+    
+    // Find user in database
+    const user = await User.findById(decoded.userId).select('-password -googleId -__v');
     
     if (!user) {
       return NextResponse.json(
@@ -24,7 +37,7 @@ export async function GET() {
         { status: 404 }
       );
     }
-    
+
     return NextResponse.json({
       success: true,
       user: {
@@ -33,10 +46,13 @@ export async function GET() {
         email: user.email,
         role: user.role,
         avatar: user.avatar,
+        enrolledCourses: user.enrolledCourses.length,
+        provider: user.provider,
+        emailVerified: user.emailVerified,
         createdAt: user.createdAt,
       },
     });
-    
+
   } catch (error: any) {
     console.error('Get current user error:', error);
     

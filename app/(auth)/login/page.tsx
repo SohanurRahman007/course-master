@@ -1,9 +1,10 @@
-// app/(auth)/login/page.tsx - WITH GOOGLE
+// app/(auth)/login/page.tsx - THEME-ALIGNED WITH CORRECT REDIRECT LOGIC
 "use client";
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+// ... (All other imports remain the same)
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,11 +19,14 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Eye, EyeOff, Mail, Lock, Loader2, Chrome } from "lucide-react";
-import { signIn } from "next-auth/react";
+// import { signIn } from "next-auth/react"; // Uncomment if using NextAuth
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // ✅ সংশোধিত লজিক: redirect টার্গেট হিসেবে হয় URL প্যারামিটার ব্যবহার করবে,
+  // নতুবা ডিফল্টভাবে /dashboard ব্যবহার করবে।
   const redirect = searchParams.get("redirect") || "/dashboard";
 
   const [formData, setFormData] = useState({
@@ -33,12 +37,15 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Regular login
+  // --- Handlers ---
+
+  // 1. Manual Login Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      // Simulate API call (replace with actual API endpoint)
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -52,13 +59,15 @@ export default function LoginPage() {
       }
 
       toast.success("Login successful!", {
-        description: `Welcome back, ${data.user.name}!`,
+        description: `Welcome back, ${data.user.name || "user"}!`,
       });
 
+      // ✅ রিডাইরেক্ট লজিক (Manual Login):
       setTimeout(() => {
-        if (data.user.role === "admin") {
+        if (data.user?.role === "admin") {
           router.push("/dashboard/admin");
         } else {
+          // যদি redirect প্যারামিটার থাকে, সেখানে যাবে। না থাকলে /dashboard এ যাবে।
           router.push(redirect);
         }
       }, 1000);
@@ -71,14 +80,17 @@ export default function LoginPage() {
     }
   };
 
-  // Google login
+  // 2. Google Login Handler
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      await signIn("google", {
-        callbackUrl: redirect,
-        redirect: true,
-      });
+      // ✅ রিডাইরেক্ট লজিক (Google Login): callbackUrl হিসেবে redirect ভ্যালুটি ব্যবহার করবে।
+      window.location.href = `/api/auth/signin/google?callbackUrl=${encodeURIComponent(
+        redirect
+      )}`;
+
+      // If using NextAuth:
+      // await signIn("google", { callbackUrl: redirect, redirect: true });
     } catch (error) {
       toast.error("Google login failed", {
         description: "Please try again later",
@@ -88,40 +100,40 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-md shadow-2xl border-0">
+    // ... (JSX remains the same as previously corrected version) ...
+    <div className="flex items-center justify-center min-h-[calc(100vh-64px)] p-4 bg-background">
+      <Card className="w-full max-w-md shadow-lg dark:shadow-xl border dark:border-border">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <CardTitle className="text-3xl font-bold text-card-foreground">
             Welcome Back
           </CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-400">
+          <CardDescription className="text-muted-foreground">
             Sign in to continue your learning journey
           </CardDescription>
         </CardHeader>
 
         <CardContent>
-          {/* Google Login Button */}
           <Button
             type="button"
             variant="outline"
-            className="w-full mb-6"
+            className="w-full mb-6 py-2.5 border-2 hover:bg-muted dark:hover:bg-muted dark:border-border"
             onClick={handleGoogleLogin}
             disabled={isLoading || googleLoading}
           >
             {googleLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin text-foreground" />
             ) : (
-              <Chrome className="mr-2 h-4 w-4" />
+              <Chrome className="mr-2 h-4 w-4 text-foreground" />
             )}
             Continue with Google
           </Button>
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
-              <Separator />
+              <Separator className="bg-border dark:bg-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
+              <span className="bg-card px-2 text-muted-foreground">
                 Or sign in with email
               </span>
             </div>
@@ -131,12 +143,12 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="you@example.com"
-                  className="pl-10"
+                  className="pl-10 focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
@@ -152,18 +164,18 @@ export default function LoginPage() {
                 <Label htmlFor="password">Password</Label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-primary hover:underline"
+                  className="text-sm text-primary hover:text-primary/80 hover:underline"
                 >
                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="pl-10 pr-10"
+                  className="pl-10 pr-10 focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0"
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
@@ -180,15 +192,19 @@ export default function LoginPage() {
                   disabled={isLoading}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
+                    <Eye className="h-4 w-4 text-muted-foreground" />
                   )}
                 </Button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 dark:hover:bg-primary/90"
+              disabled={isLoading || googleLoading}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -203,10 +219,10 @@ export default function LoginPage() {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <span className="w-full border-t dark:border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
+                <span className="bg-card px-2 text-muted-foreground">
                   New to CourseMaster?
                 </span>
               </div>
@@ -214,17 +230,17 @@ export default function LoginPage() {
 
             <Button
               variant="outline"
-              className="w-full mt-4"
+              className="w-full mt-4 hover:bg-muted dark:hover:bg-muted dark:border-border"
               onClick={() => router.push("/register")}
-              disabled={isLoading}
+              disabled={isLoading || googleLoading}
             >
               Create an account
             </Button>
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col space-y-2">
-          <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+        <CardFooter className="flex flex-col space-y-2 pt-6 border-t dark:border-border">
+          <p className="text-xs text-center text-muted-foreground">
             By continuing, you agree to our{" "}
             <Link href="/terms" className="text-primary hover:underline">
               Terms of Service
