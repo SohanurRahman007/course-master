@@ -1,97 +1,68 @@
-// app/api/auth/login/route.ts - UPDATED
+// app/api/auth/login/route.ts - SIMPLE VERSION (যদি NextAuth না চান)
+import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { User } from '@/lib/models/User';
-import { generateToken, setAuthCookie } from '@/lib/auth';
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
-});
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
     
     const body = await request.json();
-    const validatedData = loginSchema.parse(body);
-    
-    // Find user in database
-    const user = await User.findOne({ 
-      email: validatedData.email.toLowerCase(),
-      provider: 'local' // Only local users can login with password
-    }).select('+password');
+    const { email, password } = body;
+
+    // Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
     
     if (!user) {
       return NextResponse.json(
         { 
-          error: 'Invalid credentials',
-          message: 'No account found with this email. Please register first.'
+          success: false,
+          error: 'USER_NOT_FOUND',
+          message: 'No account found with this email' 
         },
         { status: 401 }
       );
     }
-    
+
     // Check password
-    const isPasswordValid = await user.comparePassword(validatedData.password);
+    const isValid = await bcrypt.compare(password, user.password);
     
-    if (!isPasswordValid) {
+    if (!isValid) {
       return NextResponse.json(
         { 
-          error: 'Invalid credentials',
-          message: 'Incorrect password. Please try again.'
+          success: false,
+          error: 'INVALID_PASSWORD',
+          message: 'Incorrect password' 
         },
         { status: 401 }
       );
     }
-    
-    // Update last login (optional)
-    user.updatedAt = new Date();
-    await user.save();
-    
-    // Generate token
-    const token = generateToken({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    });
-    
-    // Set cookie
-    await setAuthCookie(token);
-    
-    // Prepare response
+
+    // Return user data (without password)
     const userResponse = {
-      _id: user._id,
+      _id: user._id.toString(),
       name: user.name,
       email: user.email,
       role: user.role,
       avatar: user.avatar,
-      provider: user.provider,
-      emailVerified: user.emailVerified,
-      enrolledCourses: user.enrolledCourses.length,
-      createdAt: user.createdAt,
     };
-    
+
     return NextResponse.json({
       success: true,
-      message: 'Login successful! Welcome back.',
+      message: 'Login successful',
       user: userResponse,
-      token,
     });
-    
+
   } catch (error: any) {
     console.error('Login error:', error);
     
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
-        { status: 400 }
-      );
-    }
-    
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        success: false,
+        error: 'SERVER_ERROR',
+        message: 'Internal server error' 
+      },
       { status: 500 }
     );
   }

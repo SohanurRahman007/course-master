@@ -1,108 +1,127 @@
-// app/api/auth/register/route.ts - UPDATED (Manual password hash)
+// app/api/auth/register/route.ts - WORKING VERSION
+import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { User } from '@/lib/models/User';
-import { generateToken, setAuthCookie } from '@/lib/auth';
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import bcrypt from 'bcryptjs'; // Import bcrypt
-
-const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['student', 'instructor']).default('student'),
-});
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    console.log('🔧 Register API called');
+    
+    // Connect to database
+    const connection = await connectDB();
+    console.log('✅ Database connected');
     
     const body = await request.json();
-    const validatedData = registerSchema.parse(body);
+    console.log('📦 Request body:', { ...body, password: '***' });
     
-    // Check if user already exists
-    const existingUser = await User.findOne({ 
-      email: validatedData.email.toLowerCase() 
-    });
-    
-    if (existingUser) {
+    const { name, email, password, role = 'student' } = body;
+
+    // Basic validation
+    if (!name || !email || !password) {
+      console.log('❌ Validation failed: Missing fields');
       return NextResponse.json(
         { 
-          error: 'User already exists',
-          message: 'An account with this email already exists.'
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Name, email and password are required' 
         },
         { status: 400 }
       );
     }
-    
-    // ✅ MANUAL PASSWORD HASHING (since pre-save hook is problematic)
+
+    if (password.length < 6) {
+      console.log('❌ Validation failed: Password too short');
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Password must be at least 6 characters' 
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      console.log('❌ User already exists:', email);
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'USER_EXISTS',
+          message: 'User already exists with this email' 
+        },
+        { status: 409 }
+      );
+    }
+
+    console.log('🔐 Hashing password...');
+    // Hash password manually
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(validatedData.password, salt);
-    
-    // Create new user with hashed password
-    const user = new User({
-      name: validatedData.name,
-      email: validatedData.email.toLowerCase(),
-      password: hashedPassword, // Already hashed
-      role: validatedData.role,
-      provider: 'local',
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    console.log('👤 Creating user...');
+    // Create new user
+    const user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role,
       emailVerified: false,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(validatedData.name)}&background=random`,
     });
-    
-    await user.save();
-    
-    // Generate JWT token
-    const token = generateToken({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    });
-    
-    // Set HTTP-only cookie
-    await setAuthCookie(token);
+
+    console.log('✅ User created:', user.email);
     
     // Prepare response
     const userResponse = {
-      _id: user._id,
+      _id: user._id.toString(),
       name: user.name,
       email: user.email,
       role: user.role,
       avatar: user.avatar,
-      provider: user.provider,
-      emailVerified: user.emailVerified,
       createdAt: user.createdAt,
     };
-    
+
     return NextResponse.json({
       success: true,
-      message: 'Registration successful!',
+      message: 'Registration successful',
       user: userResponse,
-      token,
     }, { status: 201 });
-    
+
   } catch (error: any) {
-    console.error('Registration error:', error);
+    console.error('❌ Registration error:', error);
     
-    if (error instanceof z.ZodError) {
+    // Handle specific errors
+    if (error.name === 'MongoServerError' && error.code === 11000) {
       return NextResponse.json(
         { 
-          error: 'Validation error',
-          details: error.errors
+          success: false,
+          error: 'DUPLICATE_KEY',
+          message: 'Email already exists' 
         },
-        { status: 400 }
+        { status: 409 }
       );
     }
     
-    if (error.code === 11000) {
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map((err: any) => err.message);
       return NextResponse.json(
-        { error: 'Email already registered' },
+        { 
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: errors.join(', ') 
+        },
         { status: 400 }
       );
     }
     
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        success: false,
+        error: 'SERVER_ERROR',
+        message: 'Internal server error. Please try again.' 
+      },
       { status: 500 }
     );
   }

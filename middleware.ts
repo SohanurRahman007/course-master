@@ -1,50 +1,38 @@
-// middleware.ts
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { verifyToken } from './lib/auth';
+// middleware.ts - ADVANCED WITH ROLES
+import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
 
-// Public routes that don't require authentication
-const publicRoutes = ['/login', '/register', '/', '/courses', '/api/auth/login', '/api/auth/register', '/api/test'];
+export default withAuth(
+  function middleware(req) {
+    const token = req.nextauth.token;
+    const pathname = req.nextUrl.pathname;
 
-// Admin routes
-const adminRoutes = ['/dashboard/admin', '/api/admin'];
+    // Role-based access control
+    if (pathname.startsWith("/dashboard/admin") && token?.role !== "admin") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const token = request.cookies.get('auth_token')?.value;
+    if (pathname.startsWith("/dashboard/instructor") && token?.role !== "instructor") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
 
-  // Allow public routes
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token,
+    },
+    pages: {
+      signIn: "/login",
+    },
   }
-
-  // Check if user is authenticated
-  if (!token) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Verify token
-  const user = verifyToken(token);
-  
-  if (!user) {
-    const response = NextResponse.redirect(new URL('/login', request.url));
-    response.cookies.delete('auth_token');
-    return response;
-  }
-
-  // Check admin routes
-  if (adminRoutes.some(route => pathname.startsWith(route)) && user.role !== 'admin') {
-    return NextResponse.redirect(new URL('/dashboard/student', request.url));
-  }
-
-  return NextResponse.next();
-}
+);
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/api/:path*',
+    "/dashboard/:path*",
+    "/profile/:path*",
+    "/courses/create/:path*",
+    "/admin/:path*",
   ],
 };

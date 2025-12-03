@@ -1,4 +1,4 @@
-// app/(auth)/register/page.tsx - THEME-ALIGNED WITH CORRECT REDIRECT LOGIC
+// app/(auth)/register/page.tsx - UPDATED (Google OAuth Removed)
 "use client";
 
 import { useState } from "react";
@@ -22,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   Eye,
@@ -31,7 +30,6 @@ import {
   Lock,
   User,
   Loader2,
-  Chrome,
   CheckCircle,
   GraduationCap,
 } from "lucide-react";
@@ -40,7 +38,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // ✅ REDIRECT LOGIC: Get redirect target from URL or default to /dashboard
+  // Redirect target from URL or default to /dashboard
   const redirect = searchParams.get("redirect") || "/dashboard";
 
   const [formData, setFormData] = useState({
@@ -53,7 +51,6 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
   // --- Handlers ---
 
@@ -84,7 +81,6 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Simulate API call (replace with actual API endpoint)
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,23 +95,22 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || data.message || "Registration failed");
+        throw new Error(data.message || data.error || "Registration failed");
       }
 
       toast.success("Registration successful!", {
-        description: "Your account has been created successfully",
+        description: "Your account has been created. Redirecting to login...",
         icon: <CheckCircle className="h-5 w-5 text-green-500" />,
       });
 
-      // ✅ Conditional Redirect: To admin dashboard, or requested route (or default)
+      // Redirect to login page after 1 second
       setTimeout(() => {
-        if (data.user?.role === "admin") {
-          router.push("/dashboard/admin");
-        } else {
-          router.push(redirect);
-        }
+        router.push(
+          `/login?registered=true&email=${encodeURIComponent(formData.email)}`
+        );
       }, 1000);
     } catch (error: any) {
+      console.error("Registration error:", error);
       toast.error("Registration failed", {
         description: error.message || "Please try again",
       });
@@ -123,28 +118,10 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
-
-  const handleGoogleRegister = async () => {
-    setGoogleLoading(true);
-    try {
-      // ✅ Google Redirect: Pass the redirect path as callbackUrl
-      window.location.href = `/api/auth/signin/google?callbackUrl=${encodeURIComponent(
-        redirect
-      )}`;
-    } catch (error) {
-      toast.error("Google registration failed", {
-        description: "Please try email registration for now",
-      });
-      setGoogleLoading(false);
-    }
-  };
-
-  // --- Render (Theme Aligned Layout) ---
+  // --- Render ---
 
   return (
-    // Background uses theme's background color
     <div className="flex items-center justify-center min-h-[calc(100vh-64px)] p-4 bg-background">
-      {/* Centered Card for Registration Form */}
       <Card className="w-full max-w-md shadow-lg dark:shadow-xl border dark:border-border bg-card">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-3xl font-bold text-card-foreground">
@@ -156,36 +133,6 @@ export default function RegisterPage() {
         </CardHeader>
 
         <CardContent>
-          {/* Google Register Button - Styled using outline and border */}
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full mb-6 py-6 text-base border-2 hover:bg-muted dark:hover:bg-muted dark:border-border"
-            onClick={handleGoogleRegister}
-            disabled={googleLoading || isLoading}
-          >
-            {googleLoading ? (
-              <Loader2 className="mr-3 h-5 w-5 animate-spin text-foreground" />
-            ) : (
-              <Chrome className="mr-3 h-5 w-5 text-foreground" />
-            )}
-            Sign up with Google
-            <span className="ml-auto text-xs text-secondary-foreground bg-secondary px-2 py-1 rounded">
-              Recommended
-            </span>
-          </Button>
-
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="bg-border dark:bg-border" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-card px-3 text-muted-foreground">
-                Or register with email
-              </span>
-            </div>
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name Field */}
             <div className="space-y-2">
@@ -198,7 +145,7 @@ export default function RegisterPage() {
                   id="name"
                   type="text"
                   placeholder="John Doe"
-                  className="pl-10 py-6 focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0"
+                  className="pl-10 py-6"
                   value={formData.name}
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
@@ -220,7 +167,7 @@ export default function RegisterPage() {
                   id="email"
                   type="email"
                   placeholder="you@example.com"
-                  className="pl-10 py-6 focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0"
+                  className="pl-10 py-6"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
@@ -243,7 +190,7 @@ export default function RegisterPage() {
                 }
                 disabled={isLoading}
               >
-                <SelectTrigger className="py-6 focus:ring-1 focus:ring-offset-0 focus:ring-primary">
+                <SelectTrigger className="py-6">
                   <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
                 <SelectContent className="bg-card dark:border-border">
@@ -285,7 +232,7 @@ export default function RegisterPage() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="pl-10 pr-10 py-6 focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0"
+                    className="pl-10 pr-10 py-6"
                     value={formData.password}
                     onChange={(e) =>
                       setFormData({ ...formData, password: e.target.value })
@@ -323,7 +270,7 @@ export default function RegisterPage() {
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="pl-10 pr-10 py-6 focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0"
+                    className="pl-10 pr-10 py-6"
                     value={formData.confirmPassword}
                     onChange={(e) =>
                       setFormData({
@@ -352,11 +299,11 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Submit Button - Uses Primary background and Primary Foreground text */}
+            {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full py-6 text-base bg-primary text-primary-foreground hover:bg-primary/90 dark:hover:bg-primary/90"
-              disabled={isLoading || googleLoading}
+              className="w-full py-6 text-base"
+              disabled={isLoading}
             >
               {isLoading ? (
                 <>
@@ -369,23 +316,14 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          {/* Login Link Section */}
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <Separator className="bg-border dark:bg-border" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-card px-3 text-muted-foreground">
-                  Already have an account?
-                </span>
-              </div>
-            </div>
-
+          {/* Login Link */}
+          <div className="mt-8 pt-6 border-t dark:border-border">
+            <p className="text-center text-muted-foreground mb-4">
+              Already have an account?
+            </p>
             <Button
               variant="outline"
-              className="w-full mt-4 py-6 text-base hover:bg-muted dark:hover:bg-muted dark:border-border"
-              // Note: We use router.push("/login") here, usually login pages will handle the redirect parameter automatically.
+              className="w-full py-6 text-base"
               onClick={() =>
                 router.push(
                   `/login${
@@ -395,7 +333,7 @@ export default function RegisterPage() {
                   }`
                 )
               }
-              disabled={isLoading || googleLoading}
+              disabled={isLoading}
             >
               Sign in to existing account
             </Button>
@@ -403,27 +341,17 @@ export default function RegisterPage() {
         </CardContent>
 
         <CardFooter className="flex flex-col space-y-3 pt-6 border-t dark:border-border">
-          {/* Legal Links - Uses Primary color */}
           <p className="text-xs text-center text-muted-foreground">
             By creating an account, you agree to our{" "}
-            <Link
-              href="/terms"
-              className="text-primary hover:underline font-medium"
-            >
+            <Link href="/terms" className="text-primary hover:underline">
               Terms of Service
             </Link>
             ,{" "}
-            <Link
-              href="/privacy"
-              className="text-primary hover:underline font-medium"
-            >
+            <Link href="/privacy" className="text-primary hover:underline">
               Privacy Policy
             </Link>{" "}
             and{" "}
-            <Link
-              href="/cookies"
-              className="text-primary hover:underline font-medium"
-            >
+            <Link href="/cookies" className="text-primary hover:underline">
               Cookie Policy
             </Link>
           </p>

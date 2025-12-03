@@ -1,10 +1,10 @@
-// app/(auth)/login/page.tsx - THEME-ALIGNED WITH CORRECT REDIRECT LOGIC
+// app/(auth)/login/page.tsx - UPDATED (Google OAuth Removed)
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-// ... (All other imports remain the same)
+import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,18 +16,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Eye, EyeOff, Mail, Lock, Loader2, Chrome } from "lucide-react";
-// import { signIn } from "next-auth/react"; // Uncomment if using NextAuth
+import { Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // ✅ সংশোধিত লজিক: redirect টার্গেট হিসেবে হয় URL প্যারামিটার ব্যবহার করবে,
-  // নতুবা ডিফল্টভাবে /dashboard ব্যবহার করবে।
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const error = searchParams.get("error");
 
   const [formData, setFormData] = useState({
     email: "",
@@ -35,42 +32,45 @@ export default function LoginPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
-  // --- Handlers ---
+  // Show error toast if any
+  useEffect(() => {
+    if (error) {
+      toast.error("Login failed", {
+        description:
+          error === "CredentialsSignin"
+            ? "Invalid email or password"
+            : "Authentication error. Please try again.",
+      });
+    }
+  }, [error]);
 
-  // 1. Manual Login Handler
+  // Manual Login Handler (Credentials)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Simulate API call (replace with actual API endpoint)
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+      const result = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+        callbackUrl,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || data.message || "Login failed");
+      if (result?.error) {
+        toast.error("Login failed", {
+          description:
+            result.error === "CredentialsSignin"
+              ? "Invalid email or password"
+              : result.error,
+        });
+      } else if (result?.url) {
+        toast.success("Login successful!", {
+          description: "Welcome back!",
+        });
+        router.push(result.url);
       }
-
-      toast.success("Login successful!", {
-        description: `Welcome back, ${data.user.name || "user"}!`,
-      });
-
-      // ✅ রিডাইরেক্ট লজিক (Manual Login):
-      setTimeout(() => {
-        if (data.user?.role === "admin") {
-          router.push("/dashboard/admin");
-        } else {
-          // যদি redirect প্যারামিটার থাকে, সেখানে যাবে। না থাকলে /dashboard এ যাবে।
-          router.push(redirect);
-        }
-      }, 1000);
     } catch (error: any) {
       toast.error("Login failed", {
         description: error.message || "Please check your credentials",
@@ -80,27 +80,7 @@ export default function LoginPage() {
     }
   };
 
-  // 2. Google Login Handler
-  const handleGoogleLogin = async () => {
-    setGoogleLoading(true);
-    try {
-      // ✅ রিডাইরেক্ট লজিক (Google Login): callbackUrl হিসেবে redirect ভ্যালুটি ব্যবহার করবে।
-      window.location.href = `/api/auth/signin/google?callbackUrl=${encodeURIComponent(
-        redirect
-      )}`;
-
-      // If using NextAuth:
-      // await signIn("google", { callbackUrl: redirect, redirect: true });
-    } catch (error) {
-      toast.error("Google login failed", {
-        description: "Please try again later",
-      });
-      setGoogleLoading(false);
-    }
-  };
-
   return (
-    // ... (JSX remains the same as previously corrected version) ...
     <div className="flex items-center justify-center min-h-[calc(100vh-64px)] p-4 bg-background">
       <Card className="w-full max-w-md shadow-lg dark:shadow-xl border dark:border-border">
         <CardHeader className="space-y-1 text-center">
@@ -113,32 +93,6 @@ export default function LoginPage() {
         </CardHeader>
 
         <CardContent>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full mb-6 py-2.5 border-2 hover:bg-muted dark:hover:bg-muted dark:border-border"
-            onClick={handleGoogleLogin}
-            disabled={isLoading || googleLoading}
-          >
-            {googleLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin text-foreground" />
-            ) : (
-              <Chrome className="mr-2 h-4 w-4 text-foreground" />
-            )}
-            Continue with Google
-          </Button>
-
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="bg-border dark:bg-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">
-                Or sign in with email
-              </span>
-            </div>
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -203,7 +157,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 dark:hover:bg-primary/90"
-              disabled={isLoading || googleLoading}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <>
@@ -232,7 +186,7 @@ export default function LoginPage() {
               variant="outline"
               className="w-full mt-4 hover:bg-muted dark:hover:bg-muted dark:border-border"
               onClick={() => router.push("/register")}
-              disabled={isLoading || googleLoading}
+              disabled={isLoading}
             >
               Create an account
             </Button>

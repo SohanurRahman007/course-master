@@ -1,16 +1,13 @@
-// lib/models/User.ts - SIMPLE FIX (Remove problematic pre-save hook)
+// lib/models/User.ts - SIMPLE WORKING VERSION
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 
 export interface IUser extends mongoose.Document {
   name: string;
   email: string;
-  password?: string;
-  googleId?: string;
+  password: string;
   role: 'student' | 'instructor' | 'admin';
   avatar: string;
   emailVerified: boolean;
-  provider: 'local' | 'google';
   enrolledCourses: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
@@ -30,14 +27,10 @@ const userSchema = new mongoose.Schema<IUser>({
     lowercase: true,
     trim: true,
   },
-  password: {
+  password: { 
     type: String,
-    minlength: [6, 'Password must be at least 6 characters'],
-  },
-  googleId: {
-    type: String,
-    unique: true,
-    sparse: true,
+    required: [true, 'Password is required'],
+    minlength: 6,
   },
   role: {
     type: String,
@@ -52,11 +45,6 @@ const userSchema = new mongoose.Schema<IUser>({
     type: Boolean,
     default: false,
   },
-  provider: {
-    type: String,
-    enum: ['local', 'google'],
-    default: 'local',
-  },
   enrolledCourses: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Course',
@@ -67,27 +55,12 @@ const userSchema = new mongoose.Schema<IUser>({
 });
 
 
-// ✅ Simple compare password method
+// Compare password method
 userSchema.methods.comparePassword = async function(
   candidatePassword: string
 ): Promise<boolean> {
-  const user = this as any;
-  
-  if (!user.password) {
-    return false;
-  }
-  
-  return await bcrypt.compare(candidatePassword, user.password);
+  const bcrypt = require('bcryptjs');
+  return await bcrypt.compare(candidatePassword, this.password);
 };
-
-// Hide sensitive data
-userSchema.set('toJSON', {
-  transform: function(doc, ret) {
-    delete ret.password;
-    delete ret.googleId;
-    delete ret.__v;
-    return ret;
-  }
-});
 
 export const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
