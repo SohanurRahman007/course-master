@@ -1,6 +1,6 @@
 // app/api/auth/verify-db/route.ts
 import { connectDB } from '@/lib/db';
-import { User } from '@/lib/models/User';
+import { User } from '@/app/models/User';
 import { NextResponse } from 'next/server';
 
 export async function GET() {

@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
-import { User } from '@/lib/models/User';
+import { User } from '@/app/models/User';
 
 export async function GET(request: NextRequest) {
   try {

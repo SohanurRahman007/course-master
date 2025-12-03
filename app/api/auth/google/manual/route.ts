@@ -1,6 +1,6 @@
 // app/api/auth/google/manual/route.ts
 import { connectDB } from '@/lib/db';
-import { User } from '@/lib/models/User';
+import { User } from '@/app/models/User';
 import { generateToken, setAuthCookie } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
 

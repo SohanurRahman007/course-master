@@ -1,6 +1,6 @@
 // app/api/seed/courses/route.ts
 import { connectDB } from '@/lib/db';
-import { Course } from '@/lib/models/Course';
+import { Course } from '@/app/models/Course';
 import { NextResponse } from 'next/server';
 
 const sampleCourses = [
